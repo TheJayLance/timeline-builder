@@ -1,0 +1,73 @@
+# publish.yml — Build the timeline.js bundle and deploy dist/ to GitHub Pages.
+#
+# Trigger: push to main, or manual run via workflow_dispatch.
+# Output: GitHub Pages site at https://thejaylance.github.io/timeline-builder/v1/
+#
+# Pattern mirrors canon-public/.github/workflows/publish.yml — same Pages
+# deploy shape, different build step (Node/Vite instead of Python).
+
+name: Build and deploy timeline-builder
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build bundle
+        run: npm run build
+
+      - name: Stage Pages root
+        # Pages serves from /v1/ — everything in dist/ lands at that path.
+        run: |
+          mkdir -p pages-root/v1
+          cp -r dist/* pages-root/v1/
+          # Drop a redirect at the Pages root so naked URL → /v1/
+          cat > pages-root/index.html << 'EOF'
+          <!doctype html>
+          <html><head><meta http-equiv="refresh" content="0; url=./v1/"></head>
+          <body><a href="./v1/">go to v1</a></body></html>
+          EOF
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-root
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

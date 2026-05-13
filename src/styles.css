@@ -1,0 +1,191 @@
+/* styles.css — embed-only chrome styles (loading, error, reader overlay).
+ *
+ * Loaded into the Shadow DOM together with parallel-tracks.css. CSS variables
+ * with the `--jt-*` prefix are the public theming surface — consumers override
+ * them on the host element to retheme the embed.
+ *
+ * The :host block reads any CSS custom properties the consumer set on
+ * <jeff-timeline> and re-exports them under the names parallel-tracks.css
+ * expects (--bg-base, --ink, etc.). That way the vendored CSS stays exactly
+ * upstream and the public theming surface stays in our control.
+ */
+
+:host {
+  /* Public theming surface — consumers override these on <jeff-timeline>. */
+  --jt-bg: #f4ece0;
+  --jt-bg-card: #fbf6ed;
+  --jt-ink: #1a1614;
+  --jt-ink-2: #4a3f37;
+  --jt-ink-3: #80726a;
+  --jt-divider: #d8c8b4;
+  --jt-divider-strong: #b8a48a;
+  --jt-accent: #d72a2a;
+  --jt-overlay: rgba(20, 16, 14, 0.6);
+  --jt-font-display: "Inter Tight", system-ui, sans-serif;
+  --jt-font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Era tint defaults (decorative; consumers can override). */
+  --jt-zone-1: #ebe0cf;
+  --jt-zone-2: #ede2d0;
+  --jt-zone-3: #efe6d3;
+  --jt-zone-4: #f1ead6;
+
+  /* Re-export into the names parallel-tracks.css expects. */
+  --bg-base: var(--jt-bg);
+  --bg-card: var(--jt-bg-card);
+  --ink: var(--jt-ink);
+  --ink-2: var(--jt-ink-2);
+  --ink-3: var(--jt-ink-3);
+  --divider: var(--jt-divider);
+  --divider-strong: var(--jt-divider-strong);
+  --accent: var(--jt-accent);
+  --zone-1: var(--jt-zone-1);
+  --zone-2: var(--jt-zone-2);
+  --zone-3: var(--jt-zone-3);
+  --zone-4: var(--jt-zone-4);
+  --font-display: var(--jt-font-display);
+  --font-mono: var(--jt-font-mono);
+
+  display: block;
+  background: var(--jt-bg);
+  color: var(--jt-ink);
+  font-family: var(--jt-font-display);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+
+/* ===== Loading + error states ===== */
+.jt-loading,
+.jt-error {
+  padding: 80px 32px;
+  text-align: center;
+  color: var(--jt-ink-3);
+  font-family: var(--jt-font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.jt-error {
+  color: var(--jt-accent);
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--jt-font-display);
+  font-size: 14px;
+}
+
+/* ===== Reader overlay =====
+ * The overlay attaches to the shadow root, so position: fixed is relative
+ * to the viewport — it covers the full page, including content outside the
+ * embed. That's intentional: clicking a station should open a focused
+ * reader regardless of where on the host page the embed sits.
+ */
+.jt-reader-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--jt-overlay);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 48px 24px;
+}
+.jt-reader-overlay.is-open { display: flex; }
+
+.jt-reader-pane {
+  background: var(--jt-bg-card);
+  border: 1px solid var(--jt-divider-strong);
+  border-radius: 6px;
+  max-width: 720px;
+  width: 100%;
+  padding: 36px 40px 48px;
+  position: relative;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.3);
+}
+
+.jt-reader-close {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  background: transparent;
+  border: 1px solid var(--jt-divider-strong);
+  color: var(--jt-ink-2);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-family: var(--jt-font-mono);
+  font-size: 10px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.jt-reader-close:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--jt-ink);
+}
+
+.jt-reader-stripe {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 4px 12px 4px 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.05);
+  font-family: var(--jt-font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.jt-reader-bullet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: white;
+  font-weight: 700;
+  font-size: 11px;
+}
+.jt-reader-period {
+  font-family: var(--jt-font-mono);
+  font-size: 11px;
+  color: var(--jt-ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+.jt-reader-title {
+  margin: 0 0 6px;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+.jt-reader-role {
+  margin: 0 0 24px;
+  color: var(--jt-ink-2);
+  font-size: 15px;
+  font-style: italic;
+}
+.jt-reader-body {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--jt-ink);
+}
+.jt-reader-body p { margin: 0 0 1em; }
+.jt-reader-empty {
+  color: var(--jt-ink-3);
+  font-style: italic;
+}
+
+@media (max-width: 720px) {
+  .jt-reader-pane { padding: 28px 24px 36px; }
+  .jt-reader-title { font-size: 28px; }
+}

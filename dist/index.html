@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>jeff-timeline — live demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #f4ece0;
+    --ink: #1a1614;
+    --ink-2: #4a3f37;
+    --ink-3: #80726a;
+    --divider: #d8c8b4;
+    --accent: #d72a2a;
+    --font-display: "Inter Tight", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-display);
+  }
+  .demo-head {
+    max-width: 1480px;
+    margin: 0 auto;
+    padding: 40px 32px 16px;
+    border-bottom: 1px dashed var(--divider);
+  }
+  .demo-head h1 {
+    margin: 0 0 8px;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .demo-head .lede {
+    margin: 0 0 16px;
+    color: var(--ink-2);
+    max-width: 680px;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .demo-head .embed-code {
+    margin: 0;
+    padding: 12px 16px;
+    background: rgba(0, 0, 0, 0.04);
+    border-left: 3px solid var(--accent);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink);
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .demo-meta {
+    margin: 12px 0 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .demo-meta a {
+    color: var(--ink-2);
+    text-decoration: none;
+    border-bottom: 1px solid var(--divider);
+  }
+  .demo-meta a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+  @media (max-width: 720px) {
+    .demo-head { padding: 24px 16px 12px; }
+    .demo-head h1 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="demo-head">
+  <h1>jeff-timeline · live demo</h1>
+  <p class="lede">
+    An embeddable web component that renders a parallel-tracks timeline against
+    the Digital Jeff canon. Drop two lines into any modern browser-capable page
+    and you have a working timeline:
+  </p>
+  <pre class="embed-code">&lt;script src="https://thejaylance.github.io/timeline-builder/v1/timeline.js"&gt;&lt;/script&gt;
+&lt;jeff-timeline chart="career-map"&gt;&lt;/jeff-timeline&gt;</pre>
+  <p class="demo-meta">
+    <a href="https://github.com/TheJayLance/timeline-builder">source on github</a>
+    &nbsp;·&nbsp;
+    <a href="https://thejaylance.github.io/canon-public/v1/corpus.json">canon corpus</a>
+    &nbsp;·&nbsp;
+    <a href="https://thejaylance.github.io/canon-public/v1/charts/career-map.json">chart config</a>
+  </p>
+</header>
+
+<jeff-timeline chart="career-map"></jeff-timeline>
+
+<script src="./timeline.js"></script>
+
+</body>
+</html>

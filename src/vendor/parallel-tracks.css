@@ -1,0 +1,348 @@
+/* ===========================================================================
+ * VENDORED from C:\jeff-data\jaylance\parallel-tracks\parallel-tracks.css
+ * Copy date: 2026-05-13
+ * Library version: 2026-05-12 (post-click-bug fix)
+ *
+ * NO SURGERY required. Plain CSS, identical to upstream.
+ * When re-vendoring after upstream changes: replace contents verbatim.
+ * =========================================================================== */
+
+/* ===== Root + layout ===== */
+.pt-root {
+  font-family: var(--font-display, "Inter Tight", system-ui, sans-serif);
+  color: var(--ink, #1a1614);
+}
+
+.pt-frame {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 32px;
+}
+
+.pt-canvas {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--pt-years-w, 88px) 1fr var(--pt-eras-w, 200px);
+  column-gap: 0;
+}
+
+/* ===== Year axis (left rail) ===== */
+.pt-years-rail {
+  position: relative;
+  border-right: 1px dashed var(--divider-strong, #b8a48a);
+}
+.pt-yr-tick {
+  position: absolute;
+  left: 0; right: 12px;
+  transform: translateY(-50%);
+  text-align: right;
+  font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
+  font-size: 11px;
+  color: var(--ink-3, #80726a);
+  letter-spacing: 0.04em;
+}
+.pt-yr-tick.is-decade {
+  color: var(--ink, #1a1614);
+  font-weight: 600;
+  font-size: 13px;
+}
+.pt-yr-tick.is-hinge {
+  color: var(--accent, #d72a2a);
+  font-weight: 600;
+}
+.pt-hinge-note {
+  display: block;
+  font-family: var(--font-display, "Inter Tight", system-ui, sans-serif);
+  font-size: 10px;
+  color: var(--ink-3, #80726a);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 400;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+/* ===== Era zones (right rail labels + canvas tints) ===== */
+.pt-eras-rail {
+  position: relative;
+  border-left: 1px dashed var(--divider-strong, #b8a48a);
+}
+.pt-zone-label {
+  position: absolute;
+  top: 0;
+  right: 16px;
+  text-align: right;
+  max-width: calc(var(--pt-eras-w, 200px) - 24px);
+}
+.pt-zone-num {
+  font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-3, #80726a);
+  display: block;
+  margin-bottom: 4px;
+}
+.pt-zone-name {
+  font-family: var(--font-display, "Inter Tight", system-ui, sans-serif);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink, #1a1614);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.pt-zone-tint {
+  position: absolute;
+  left: 0; right: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.pt-zone-tint-1 { background: var(--zone-1, #ebe0cf); }
+.pt-zone-tint-2 { background: var(--zone-2, #ede2d0); }
+.pt-zone-tint-3 { background: var(--zone-3, #efe6d3); }
+.pt-zone-tint-4 { background: var(--zone-4, #f1ead6); }
+
+.pt-zone-rule {
+  position: absolute;
+  left: 0; right: 0;
+  height: 0;
+  border-top: 1px solid var(--ink, #1a1614);
+  z-index: 4;
+  pointer-events: none;
+}
+
+/* ===== Routes panel ===== */
+.pt-routes {
+  position: relative;
+}
+.pt-routes-svg {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  overflow: visible;
+}
+
+/* ===== Track caps ===== */
+.pt-track-cap {
+  position: absolute;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-family: var(--font-display, "Inter Tight", system-ui, sans-serif);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  z-index: 3;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
+}
+
+/* ===== Stations ===== */
+.pt-station {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  pointer-events: none;
+}
+
+.pt-dot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: var(--pt-dot-w, 18px);
+  height: var(--pt-dot-w, 18px);
+  border-radius: 50%;
+  background: var(--bg-card, #fbf6ed);
+  border: 3px solid currentColor;
+  z-index: 2;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.pt-leader {
+  position: absolute;
+  background: currentColor;
+  opacity: 0.45;
+  z-index: 1;
+  pointer-events: none;
+}
+.pt-leader-h {
+  height: 1.5px;
+  transform: translateY(-50%);
+}
+.pt-leader-v {
+  width: 1.5px;
+  transform: translateX(-50%);
+}
+
+.pt-station:hover .pt-dot,
+.pt-station:focus-visible .pt-dot {
+  transform: translate(-50%, -50%) scale(1.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+/* ===== Station label cards ===== */
+.pt-label {
+  position: absolute;
+  transform: translateY(-50%);
+  background: var(--bg-card, #fbf6ed);
+  border: 1px solid var(--divider, #d8c8b4);
+  padding: 3px 8px 4px;
+  transition: border-color 120ms ease, transform 120ms ease;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.pt-label-right {
+  border-left: 3px solid currentColor;
+  text-align: left;
+}
+.pt-label-left {
+  border-right: 3px solid currentColor;
+  text-align: right;
+}
+.pt-label-period {
+  display: block;
+  font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
+  font-size: 9px;
+  color: var(--ink-3, #80726a);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 1px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pt-label-title {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink, #1a1614);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pt-label-role {
+  display: block;
+  font-size: 10.5px;
+  color: var(--ink-2, #4a3f37);
+  margin-top: 1px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pt-station:hover .pt-label,
+.pt-station:focus-visible .pt-label {
+  border-color: currentColor;
+  z-index: 6;
+}
+.pt-station:hover .pt-label-title,
+.pt-station:focus-visible .pt-label-title {
+  white-space: normal;
+}
+
+/* ===== Legend ===== */
+.pt-legend {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg-base, #f4ece0);
+  border-bottom: 2px solid var(--ink, #1a1614);
+  padding: 16px 0;
+}
+.pt-legend-inner {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.pt-legend-title {
+  font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-3, #80726a);
+  padding-right: 16px;
+  border-right: 1px solid var(--divider, #d8c8b4);
+  margin-right: 8px;
+}
+.pt-legend-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: inherit;
+  color: var(--ink, #1a1614);
+  transition: opacity 120ms ease, background 120ms ease;
+}
+.pt-legend-track:hover { background: rgba(0, 0, 0, 0.05); }
+.pt-legend-track.is-hidden {
+  opacity: 0.4;
+}
+.pt-legend-track.is-hidden .pt-legend-name {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+.pt-legend-bullet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  color: white;
+  font-family: var(--font-display, "Inter Tight", system-ui, sans-serif);
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+}
+.pt-legend-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+.pt-legend-count {
+  font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
+  font-size: 10px;
+  color: var(--ink-3, #80726a);
+  margin-left: 4px;
+}
+
+/* ===== Responsive (degraded mobile / tablet) ===== */
+@media (max-width: 900px) {
+  .pt-canvas { --pt-eras-w: 0px; }
+  .pt-eras-rail { display: none; }
+  .pt-frame { padding: 24px 16px; }
+}
+@media (max-width: 640px) {
+  .pt-canvas { --pt-years-w: 48px; }
+  .pt-label { max-width: 120px; }
+  .pt-label-title { font-size: 11.5px; }
+}

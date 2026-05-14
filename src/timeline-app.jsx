@@ -33,6 +33,7 @@ export function TimelineApp({ chart, canonBase }) {
   const [corpus, setCorpus] = useState(null);
   const [chartConfig, setChartConfig] = useState(null);
   const [openSlug, setOpenSlug] = useState(null);
+  const [activeTagFilter, setActiveTagFilter] = useState(null);
 
   // Load corpus + chart config. Re-fires when chart/canonBase change.
   useEffect(() => {
@@ -55,13 +56,23 @@ export function TimelineApp({ chart, canonBase }) {
   }, [chart, canonBase]);
 
   // Resolve tracks against the loaded corpus + chart config.
+  // If an active tag filter is set, narrow the corpus to items carrying that
+  // tag BEFORE preFilter + track resolution. The filter is global to the
+  // chart (affects all tracks), not per-track.
   const resolved = useMemo(() => {
     if (!corpus || !chartConfig) return null;
+    let working = corpus;
+    if (activeTagFilter) {
+      working = {
+        ...corpus,
+        items: corpus.items.filter(it => Array.isArray(it.tags) && it.tags.includes(activeTagFilter)),
+      };
+    }
     const preFiltered = chartConfig.preFilter
-      ? { ...corpus, items: queryItems(corpus, chartConfig.preFilter) }
-      : corpus;
+      ? { ...working, items: queryItems(working, chartConfig.preFilter) }
+      : working;
     return resolveTracks(preFiltered, chartConfig.tracks, { multiRender: true });
-  }, [corpus, chartConfig]);
+  }, [corpus, chartConfig, activeTagFilter]);
 
   const itemsBySlug = useMemo(() => {
     if (!corpus) return new Map();
@@ -70,6 +81,15 @@ export function TimelineApp({ chart, canonBase }) {
 
   const closeReader = useCallback(() => setOpenSlug(null), []);
   const openItem = useCallback((slug) => setOpenSlug(slug), []);
+
+  // Tag filter: click a tag to filter the chart; click the same tag again
+  // (or the clear button) to remove the filter. Filter persists across
+  // reader-close intentionally — the whole point of filtering is to look at
+  // the narrowed timeline.
+  const toggleTagFilter = useCallback((tag) => {
+    setActiveTagFilter(prev => prev === tag ? null : tag);
+  }, []);
+  const clearTagFilter = useCallback(() => setActiveTagFilter(null), []);
 
   // Escape closes reader. Listen on the document because the shadow root
   // doesn't get keyboard events naturally.
@@ -96,6 +116,18 @@ export function TimelineApp({ chart, canonBase }) {
 
   return (
     <>
+      {activeTagFilter && (
+        <div className="jt-filter-bar" role="status">
+          <span className="jt-filter-label">Filtered by</span>
+          <span className="jt-filter-tag">{activeTagFilter}</span>
+          <button
+            type="button"
+            className="jt-filter-clear"
+            onClick={clearTagFilter}
+            aria-label="Clear filter"
+          >Clear ×</button>
+        </div>
+      )}
       <ParallelTracks
         tracks={resolved}
         timeAxis={chartConfig.timeAxis}
@@ -106,6 +138,8 @@ export function TimelineApp({ chart, canonBase }) {
         <TimelineReader
           item={openItem_}
           resolved={resolved}
+          activeTagFilter={activeTagFilter}
+          onTagClick={toggleTagFilter}
           onClose={closeReader}
         />
       )}
@@ -114,7 +148,7 @@ export function TimelineApp({ chart, canonBase }) {
 }
 
 // ---------- Reader overlay ----------
-function TimelineReader({ item, resolved, onClose }) {
+function TimelineReader({ item, resolved, activeTagFilter, onTagClick, onClose }) {
   const track = resolved.find(t => t.items.some(it => it.slug === item.slug));
   const parsed = ptParseDate(item.period_start);
   const period = ptFormatPeriod(parsed, item.period_display);
@@ -162,9 +196,19 @@ function TimelineReader({ item, resolved, onClose }) {
           : <div className="jt-reader-body"><p className="jt-reader-empty">No notes yet for this item.</p></div>}
         {item.tags && item.tags.length > 0 && (
           <ul className="jt-reader-tags" aria-label="Tags">
-            {item.tags.map(tag => (
-              <li key={tag} className="jt-reader-tag">{tag}</li>
-            ))}
+            {item.tags.map(tag => {
+              const isActive = tag === activeTagFilter;
+              return (
+                <li key={tag}>
+                  <button
+                    type="button"
+                    className={"jt-reader-tag" + (isActive ? " is-active" : "")}
+                    onClick={() => onTagClick && onTagClick(tag)}
+                    aria-pressed={isActive}
+                  >{tag}</button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </article>

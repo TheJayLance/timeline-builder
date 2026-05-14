@@ -293,6 +293,73 @@
   text-transform: lowercase;
   letter-spacing: 0.02em;
   white-space: nowrap;
+  cursor: pointer;
+  transition: background 100ms ease, color 100ms ease, border-color 100ms ease;
+}
+.jt-reader-tag:hover,
+.jt-reader-tag:focus-visible {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--jt-ink);
+  border-color: var(--jt-divider-strong);
+}
+.jt-reader-tag.is-active {
+  background: var(--jt-accent);
+  color: white;
+  border-color: var(--jt-accent);
+}
+.jt-reader-tag.is-active:hover,
+.jt-reader-tag.is-active:focus-visible {
+  background: var(--jt-accent);
+  filter: brightness(1.08);
+}
+
+/* ===== Filter bar (top of chart when a tag filter is active) ===== *
+ * Sits above the legend. Sticky together with the legend so it stays
+ * visible while scrolling. Communicates the active filter clearly and
+ * provides a one-click escape. */
+.jt-filter-bar {
+  position: sticky;
+  top: 0;
+  z-index: 21;
+  background: var(--jt-accent);
+  color: white;
+  padding: 8px 32px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--jt-font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.jt-filter-label {
+  opacity: 0.75;
+}
+.jt-filter-tag {
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+  padding: 2px 10px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+}
+.jt-filter-clear {
+  margin-left: auto;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+.jt-filter-clear:hover,
+.jt-filter-clear:focus-visible {
+  background: rgba(255, 255, 255, 0.28);
 }
 
 @media (max-width: 720px) {

@@ -16,9 +16,16 @@
 // renders inside a Shadow DOM with styles injected as a <style> tag.
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { marked } from 'marked';
 import { ParallelTracks, ptParseDate, ptFormatPeriod } from './vendor/parallel-tracks.jsx';
 import { queryItems, resolveTracks } from './vendor/query-engine.js';
 import { loadTimelineData } from './loader.js';
+
+// Configure marked once at module load. GFM gives us tables, strikethrough,
+// task lists, auto-link, etc. on top of the CommonMark baseline. breaks:false
+// keeps the markdown behaving like a document (one newline = soft join), not
+// like a chat message (one newline = <br>).
+marked.setOptions({ gfm: true, breaks: false });
 
 export function TimelineApp({ chart, canonBase }) {
   const [status, setStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
@@ -111,7 +118,21 @@ function TimelineReader({ item, resolved, onClose }) {
   const track = resolved.find(t => t.items.some(it => it.slug === item.slug));
   const parsed = ptParseDate(item.period_start);
   const period = ptFormatPeriod(parsed, item.period_display);
-  const paragraphs = (item.curator_note_md || '').split(/\n\n+/).filter(Boolean);
+
+  // Parse the curator_note_md markdown into HTML once per render. The corpus
+  // ships markdown source; the reader renders it. If parsing throws (malformed
+  // input), fall back to raw text wrapped in a paragraph so the reader stays
+  // usable rather than blank.
+  const bodyHtml = useMemo(() => {
+    const src = item.curator_note_md || '';
+    if (!src.trim()) return null;
+    try {
+      return marked.parse(src);
+    } catch (e) {
+      console.warn('[timeline-builder] marked failed to parse item', item.slug, e);
+      return `<p>${src.replace(/[<>&]/g, ch => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[ch]))}</p>`;
+    }
+  }, [item.slug, item.curator_note_md]);
 
   return (
     <div
@@ -136,11 +157,9 @@ function TimelineReader({ item, resolved, onClose }) {
         </div>
         <h1 className="jt-reader-title">{item.title}</h1>
         {item.role && <p className="jt-reader-role">{item.role}</p>}
-        <div className="jt-reader-body">
-          {paragraphs.length > 0
-            ? paragraphs.map((p, i) => <p key={i}>{p}</p>)
-            : <p className="jt-reader-empty">No notes yet for this item.</p>}
-        </div>
+        {bodyHtml
+          ? <div className="jt-reader-body jt-markdown" dangerouslySetInnerHTML={{ __html: bodyHtml }} />
+          : <div className="jt-reader-body"><p className="jt-reader-empty">No notes yet for this item.</p></div>}
       </article>
     </div>
   );

@@ -1,7 +1,7 @@
 /* ===========================================================================
  * VENDORED from C:\jeff-data\jaylance\parallel-tracks\parallel-tracks.css
- * Copy date: 2026-05-14
- * Library version: 2026-05-14 (post-Phase-A hinges-to-right-rail change)
+ * Copy date: 2026-05-14 (afternoon, post-canvas-bg fix)
+ * Library version: 2026-05-14 (canvas-bg fix for un-era'd time ranges)
  *
  * NO SURGERY required. Plain CSS, identical to upstream.
  * When re-vendoring after upstream changes: replace contents verbatim.
@@ -133,9 +133,14 @@
   pointer-events: none;
 }
 
-/* ===== Routes panel ===== */
+/* ===== Routes panel ===== *
+ * Default canvas background. Sits underneath the era tints (`.pt-zone-tint-*`)
+ * so any time range outside a configured era still reads as chart canvas
+ * rather than as page chrome. Chart configs can override via the
+ * `--pt-canvas-bg` CSS variable. */
 .pt-routes {
   position: relative;
+  background: var(--pt-canvas-bg, #ece4d2);
 }
 .pt-routes-svg {
   position: absolute;

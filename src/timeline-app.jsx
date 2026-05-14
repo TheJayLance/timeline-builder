@@ -160,6 +160,13 @@ function TimelineReader({ item, resolved, onClose }) {
         {bodyHtml
           ? <div className="jt-reader-body jt-markdown" dangerouslySetInnerHTML={{ __html: bodyHtml }} />
           : <div className="jt-reader-body"><p className="jt-reader-empty">No notes yet for this item.</p></div>}
+        {item.tags && item.tags.length > 0 && (
+          <ul className="jt-reader-tags" aria-label="Tags">
+            {item.tags.map(tag => (
+              <li key={tag} className="jt-reader-tag">{tag}</li>
+            ))}
+          </ul>
+        )}
       </article>
     </div>
   );

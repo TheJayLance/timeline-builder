@@ -1,7 +1,7 @@
 // ============================================================================
 // VENDORED from C:\jeff-data\jaylance\parallel-tracks\parallel-tracks.jsx
-// Copy date: 2026-05-13
-// Library version: 2026-05-12 (post-click-bug fix)
+// Copy date: 2026-05-14
+// Library version: 2026-05-14 (post-Phase-A hinges-to-right-rail change)
 //
 // SURGERY APPLIED for ES-module build (Vite):
 //   1. Top-of-file `const { useState, ... } = React;` replaced with
@@ -353,22 +353,17 @@ function PTLegend({ tracks, hidden, onToggle }) {
 }
 
 function PTYearsRail({ axis }) {
+  // Year axis ticks only. Decade labels in bold, even-year minor ticks for
+  // visual rhythm. Hinge annotations (era inflection points) render on the
+  // right rail alongside the era labels — see PTErasRail.
   const ticks = [];
   const startY = axis.start.y;
   const endY = axis.end.y;
   for (let y = startY; y <= endY; y++) {
     const isDecade = y % 10 === 0;
-    const hinge = axis.hinges.find(h => h.y === y);
     if (isDecade) {
       ticks.push(
         <div key={"d" + y} className="pt-yr-tick is-decade" style={{ top: axis.yAt({ y, m: 1, d: 1 }) }}>{y}</div>
-      );
-    } else if (hinge) {
-      ticks.push(
-        <div key={"h" + y} className="pt-yr-tick is-hinge" style={{ top: axis.yAt(hinge) }}>
-          {hinge.label || y}
-          {hinge.note && <span className="pt-hinge-note">{hinge.note}</span>}
-        </div>
       );
     } else if (y % 2 === 0) {
       ticks.push(
@@ -393,6 +388,12 @@ function PTErasRail({ axis }) {
           </div>
         );
       })}
+      {axis.hinges.map((h, i) => (
+        <div key={"hinge-" + i} className="pt-hinge-marker" style={{ top: axis.yAt(h) }}>
+          <span className="pt-hinge-label">{h.label || h.y}</span>
+          {h.note && <span className="pt-hinge-note">{h.note}</span>}
+        </div>
+      ))}
     </div>
   );
 }

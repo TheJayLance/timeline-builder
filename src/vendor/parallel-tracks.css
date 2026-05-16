@@ -383,10 +383,11 @@
 .pt-legend-name {
   font-size: 13px;
   font-weight: 500;
-  word-break: keep-all;
-  overflow-wrap: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;
   hyphens: none;
   text-wrap: balance;
+  line-height: 1.2;
 }
 
 /* ===== Responsive (degraded mobile / tablet) ===== */

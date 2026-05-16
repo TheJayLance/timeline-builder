@@ -1,11 +1,14 @@
 // ============================================================================
 // VENDORED from C:\jeff-data\jaylance\parallel-tracks\parallel-tracks.jsx
-// Copy date: 2026-05-15 (Phase 4C: legend cosmetics on 4B unified-X substrate)
+// Copy date: 2026-05-15 (Phase 4D: alignment fix on top of 4C cosmetics)
 // Library version: 2026-05-15
 //   Phase 4A: revert to 092469b (Phase C ship state)
 //   Phase 4B: getTrackColumnX + buildLayoutMetrics unification
-//   Phase 4C: name-above-bullet, count removed, label wrap discipline,
-//             chip min-width sized to longest word
+//   Phase 4C: name-above-bullet, count removed, label wrap discipline
+//   Phase 4D: drop reflow gating; bullets are always column-locked at
+//             colX across every viewport. framePad is measured at runtime
+//             so the 900 px media-query padding change does not desync
+//             the legend from the chart body.
 //
 // SURGERY APPLIED for ES-module build (Vite):
 //   1. Top-of-file `const { useState, ... } = React;` replaced with
@@ -273,10 +276,25 @@ function ParallelTracks({
 
   const ref = useRef(null);
   const [width, setWidth] = useState(0);
+  // Frame's computed padding-left, measured at runtime. The library's CSS
+  // shrinks .pt-frame padding from 32 px to 16 px at the 900 px media-query
+  // breakpoint; the legend chip positioning has to follow that change so
+  // bullet page-X equals track-line page-X at every viewport. The legend
+  // and the frame share the same max-width and auto-margin, so their left
+  // edges always coincide — the only responsive variable is the horizontal
+  // padding on .pt-frame.
+  const [framePadX, setFramePadX] = useState(32);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const measure = () => setWidth(el.offsetWidth);
+    const frame = el.closest('.pt-frame');
+    const measure = () => {
+      setWidth(el.offsetWidth);
+      if (frame) {
+        const pad = parseFloat(getComputedStyle(frame).paddingLeft);
+        if (Number.isFinite(pad)) setFramePadX(pad);
+      }
+    };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
@@ -323,7 +341,7 @@ function ParallelTracks({
         layoutMetrics={layoutMetrics}
         width={width}
         cfg={cfg}
-        framePad={32}
+        framePad={framePadX}
         yearsRailW={88}
       />
       <div className="pt-frame">
@@ -379,12 +397,13 @@ function ParallelTracks({
 // ---------- Sub-components ----------
 
 function PTLegend({ tracks, hidden, onToggle, visibleTrackIds, layoutMetrics, width, cfg, framePad = 32, yearsRailW = 88 }) {
-  // Every chip's BULLET is locked to its track's column X. The X comes
-  // from getTrackColumnX() — the SAME function the chart-body uses for
-  // its track lines, dots, leaders, and caps — so legend bullets and
-  // chart elements share one coordinate system by construction. The
-  // label sits ABOVE the bullet in a vertical stack; bullet stays on X,
-  // the label centers beneath it (text-wrap: balance handles wrapping).
+  // BULLET ALIGNMENT IS THE INVARIANT. Every visible chip is column-locked
+  // at its track's colX via getTrackColumnX() — the same function that
+  // places the SVG track line, station dots, leader anchors, and track
+  // cap. No conditional reflow, no flex-wrap fallback: the bullet is the
+  // semantic anchor and must sit exactly above its track at every viewport.
+  // Labels are secondary — they wrap (at spaces if possible, mid-word as
+  // a last resort) inside the chip but never push the bullet off-axis.
   // Page-X of a track line = framePad + yearsRailW + getTrackColumnX(...).
   const ready = width > 0 && Array.isArray(visibleTrackIds) && layoutMetrics != null;
 
@@ -397,40 +416,13 @@ function PTLegend({ tracks, hidden, onToggle, visibleTrackIds, layoutMetrics, wi
     slotW = Math.max(160, width - cfg.lanePadding);
   }
 
-  // Longest single-word width across every chip's label, measured at
-  // the legend label's typography (.pt-legend-track-locked .pt-legend-name:
-  // 600 12.5px Inter Tight). This is the hard floor a chip must reserve
-  // before column-locking — below it, words would be forced to wrap mid-
-  // word, which the spec forbids. Memoized on the labels themselves; the
-  // canvas measurement is browser-only and synchronous.
-  const labelKey = useMemo(
-    () => tracks.map(t => t.label || "").join(""),
-    [tracks]
-  );
-  const longestWordW = useMemo(() => {
-    if (typeof document === "undefined") return 0;
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    ctx.font = "600 12.5px \"Inter Tight\", system-ui, sans-serif";
-    let max = 0;
-    for (const t of tracks) {
-      const words = String(t.label || "").split(/\s+/).filter(Boolean);
-      for (const w of words) {
-        const m = ctx.measureText(w).width;
-        if (m > max) max = m;
-      }
-    }
-    return max;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [labelKey]);
-
-  // Reserve breathing room around the longest word; chip cannot squeeze
-  // narrower than this. If slotW is below this floor, column-lock is
-  // abandoned and the legend reflows to multiple rows (flex-wrap on the
-  // inner) — the spec's "multiple complete rows > one row of broken
-  // chips" rule.
-  const minChipW = Math.ceil(longestWordW + 16);
-  const canColumnLock = ready && slotW >= minChipW;
+  // Chip width floors at 40 px so the 28 px bullet plus its border still
+  // fits at very narrow viewports. Chips can be wider than their slot when
+  // crowded; they extend symmetrically from colX, so adjacent chips may
+  // visually crowd, but every bullet stays exactly on its track-X. Labels
+  // yield to the bullet: they wrap (at spaces if possible, mid-word as a
+  // last resort) but the bullet never moves.
+  const chipW = Math.max(40, slotW - 8);
 
   const hiddenList = tracks.filter(t => hidden.has(t.id));
   const hiddenIndexById = new Map(hiddenList.map((t, i) => [t.id, i]));
@@ -439,7 +431,7 @@ function PTLegend({ tracks, hidden, onToggle, visibleTrackIds, layoutMetrics, wi
     <div className="pt-legend">
       <div
         className="pt-legend-inner"
-        style={ready && canColumnLock ? { position: "relative", display: "block", minHeight: 56 } : undefined}
+        style={ready ? { position: "relative", display: "block", minHeight: 96 } : undefined}
       >
         <span className="pt-legend-title">Tracks</span>
         {tracks.map(t => {
@@ -447,21 +439,20 @@ function PTLegend({ tracks, hidden, onToggle, visibleTrackIds, layoutMetrics, wi
           const colXRoutes = ready ? getTrackColumnX(t.id, visibleTrackIds, layoutMetrics) : null;
           const colX = (colXRoutes != null) ? framePad + yearsRailW + colXRoutes : null;
           let style;
-          if (ready && canColumnLock && !isHidden && colX != null) {
+          if (ready && !isHidden && colX != null) {
             style = {
               position: "absolute",
               left: colX,
               top: 8,
               transform: "translateX(-50%)",
-              width: Math.max(72, slotW - 8),
-              minWidth: minChipW,
+              width: chipW,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               gap: 4,
               textAlign: "center",
             };
-          } else if (ready && canColumnLock && isHidden) {
+          } else if (ready && isHidden) {
             const hIdx = hiddenIndexById.get(t.id) ?? 0;
             style = {
               position: "absolute",
@@ -473,7 +464,7 @@ function PTLegend({ tracks, hidden, onToggle, visibleTrackIds, layoutMetrics, wi
               gap: 8,
             };
           } else {
-            style = { minWidth: minChipW };
+            style = undefined;
           }
           return (
             <button

@@ -1,14 +1,15 @@
 // ============================================================================
 // VENDORED from C:\jeff-data\jaylance\parallel-tracks\parallel-tracks.jsx
-// Copy date: 2026-05-15 (Phase 4D: alignment fix on top of 4C cosmetics)
+// Copy date: 2026-05-15 (Phase 4E: bullet-Y anchored + word-aware chip floor)
 // Library version: 2026-05-15
 //   Phase 4A: revert to 092469b (Phase C ship state)
 //   Phase 4B: getTrackColumnX + buildLayoutMetrics unification
-//   Phase 4C: name-above-bullet, count removed, label wrap discipline
-//   Phase 4D: drop reflow gating; bullets are always column-locked at
-//             colX across every viewport. framePad is measured at runtime
-//             so the 900 px media-query padding change does not desync
-//             the legend from the chart body.
+//   Phase 4C: name-above-bullet, count removed
+//   Phase 4D: drop reflow gating; framePad measured at runtime
+//   Phase 4E: chip is a fixed-height box with the bullet pinned to the
+//             bottom (justify-content: flex-end), so multi-line labels
+//             grow upward instead of pushing the bullet off-axis. Chip
+//             width is floored at the longest word so words never break.
 //
 // SURGERY APPLIED for ES-module build (Vite):
 //   1. Top-of-file `const { useState, ... } = React;` replaced with
@@ -416,13 +417,45 @@ function PTLegend({ tracks, hidden, onToggle, visibleTrackIds, layoutMetrics, wi
     slotW = Math.max(160, width - cfg.lanePadding);
   }
 
-  // Chip width floors at 40 px so the 28 px bullet plus its border still
-  // fits at very narrow viewports. Chips can be wider than their slot when
-  // crowded; they extend symmetrically from colX, so adjacent chips may
-  // visually crowd, but every bullet stays exactly on its track-X. Labels
-  // yield to the bullet: they wrap (at spaces if possible, mid-word as a
-  // last resort) but the bullet never moves.
-  const chipW = Math.max(40, slotW - 8);
+  // Longest word width across every label, measured at the locked
+  // legend typography (600 12.5 px Inter Tight). Floors the chip width
+  // so no word ever has to break mid-character. Memoized on the labels.
+  const labelKey = useMemo(
+    () => tracks.map(t => t.label || "").join(""),
+    [tracks]
+  );
+  const longestWordW = useMemo(() => {
+    if (typeof document === "undefined") return 0;
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    ctx.font = "600 12.5px \"Inter Tight\", system-ui, sans-serif";
+    let max = 0;
+    for (const t of tracks) {
+      const words = String(t.label || "").split(/\s+/).filter(Boolean);
+      for (const w of words) {
+        const m = ctx.measureText(w).width;
+        if (m > max) max = m;
+      }
+    }
+    return max;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [labelKey]);
+
+  // Chip width has two floors: (1) the longest single word so labels
+  // never need a mid-word break, (2) 40 px so the 28 px bullet still
+  // fits if the labels somehow shrink to nothing. Chips happily extend
+  // beyond their slot if minChipW > slotW - 8 — adjacent chips visually
+  // crowd at very narrow viewports, but every bullet stays on its
+  // track-X and no word ever breaks.
+  const minChipW = Math.ceil(longestWordW + 16);
+  const chipW = Math.max(40, minChipW, slotW - 8);
+
+  // Fixed chip height so the BULLET sits at a constant Y across every
+  // chip regardless of how many lines the label wraps to. The label is
+  // pinned to the chip's bottom via justify-content: flex-end and grows
+  // upward as it wraps. Single-line labels leave empty space above; the
+  // bullet does not move.
+  const chipH = 80;
 
   const hiddenList = tracks.filter(t => hidden.has(t.id));
   const hiddenIndexById = new Map(hiddenList.map((t, i) => [t.id, i]));
@@ -431,7 +464,7 @@ function PTLegend({ tracks, hidden, onToggle, visibleTrackIds, layoutMetrics, wi
     <div className="pt-legend">
       <div
         className="pt-legend-inner"
-        style={ready ? { position: "relative", display: "block", minHeight: 96 } : undefined}
+        style={ready ? { position: "relative", display: "block", minHeight: chipH + 16 } : undefined}
       >
         <span className="pt-legend-title">Tracks</span>
         {tracks.map(t => {
@@ -446,9 +479,11 @@ function PTLegend({ tracks, hidden, onToggle, visibleTrackIds, layoutMetrics, wi
               top: 8,
               transform: "translateX(-50%)",
               width: chipW,
+              height: chipH,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
+              justifyContent: "flex-end",
               gap: 4,
               textAlign: "center",
             };

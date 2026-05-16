@@ -384,7 +384,7 @@
   font-size: 13px;
   font-weight: 500;
   word-break: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
   hyphens: none;
   text-wrap: balance;
   line-height: 1.2;

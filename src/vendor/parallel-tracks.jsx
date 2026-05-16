@@ -1,15 +1,14 @@
 // ============================================================================
 // VENDORED from C:\jeff-data\jaylance\parallel-tracks\parallel-tracks.jsx
-// Copy date: 2026-05-15 (Phase 4E: bullet-Y anchored + word-aware chip floor)
+// Copy date: 2026-05-15 (Phase 4F: bullets resting on the separator line)
 // Library version: 2026-05-15
 //   Phase 4A: revert to 092469b (Phase C ship state)
 //   Phase 4B: getTrackColumnX + buildLayoutMetrics unification
 //   Phase 4C: name-above-bullet, count removed
 //   Phase 4D: drop reflow gating; framePad measured at runtime
-//   Phase 4E: chip is a fixed-height box with the bullet pinned to the
-//             bottom (justify-content: flex-end), so multi-line labels
-//             grow upward instead of pushing the bullet off-axis. Chip
-//             width is floored at the longest word so words never break.
+//   Phase 4E: fixed-height chips with bullet pinned to chip bottom
+//   Phase 4F: chip anchored to legend-inner bottom and padding overridden
+//             to 0 so the bullet bottom rests on the legend separator line.
 //
 // SURGERY APPLIED for ES-module build (Vite):
 //   1. Top-of-file `const { useState, ... } = React;` replaced with
@@ -476,10 +475,11 @@ function PTLegend({ tracks, hidden, onToggle, visibleTrackIds, layoutMetrics, wi
             style = {
               position: "absolute",
               left: colX,
-              top: 8,
+              bottom: 0,
               transform: "translateX(-50%)",
               width: chipW,
               height: chipH,
+              padding: 0,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",

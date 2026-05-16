@@ -297,7 +297,7 @@
   z-index: 20;
   background: var(--bg-base, #f4ece0);
   border-bottom: 2px solid var(--ink, #1a1614);
-  padding: 12px 0;
+  padding: 12px 0 0;
 }
 .pt-legend-inner {
   max-width: 1480px;

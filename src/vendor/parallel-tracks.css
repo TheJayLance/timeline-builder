@@ -1,12 +1,12 @@
-/* ===========================================================================
- * VENDORED from C:\jeff-data\jaylance\parallel-tracks\parallel-tracks.css
- * Copy date: 2026-05-15 (Phase C: dense-cluster leader + 2-line labels +
- *            column-locked legend)
- * Library version: 2026-05-15
+/* parallel-tracks.css — styles for the <ParallelTracks> primitive.
  *
- * NO SURGERY required. Plain CSS, identical to upstream.
- * When re-vendoring after upstream changes: replace contents verbatim.
- * =========================================================================== */
+ * This file owns the visual rules for the primitive. Chart pages add their
+ * own CSS for page chrome (header, reader overlay, etc.) — but never override
+ * the .pt-* rules in here without first considering the design system doc.
+ *
+ * All values reference design tokens conceptually. Where you see a magic
+ * number, it should ideally point to a token in tokens.json.
+ */
 
 /* ===== Root + layout ===== */
 .pt-root {
@@ -318,22 +318,22 @@
 }
 .pt-legend-track-locked {
   padding: 2px 4px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
 }
 .pt-legend-caption {
   display: flex;
   flex-direction: column;
   align-items: center;
   line-height: 1.15;
-  gap: 1px;
 }
 .pt-legend-track-locked .pt-legend-name {
   font-size: 12.5px;
   font-weight: 600;
   text-align: center;
-  overflow-wrap: anywhere;
-}
-.pt-legend-track-locked .pt-legend-count {
-  margin-left: 0;
 }
 .pt-legend-title {
   font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
@@ -383,12 +383,10 @@
 .pt-legend-name {
   font-size: 13px;
   font-weight: 500;
-}
-.pt-legend-count {
-  font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
-  font-size: 10px;
-  color: var(--ink-3, #80726a);
-  margin-left: 4px;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  hyphens: none;
+  text-wrap: balance;
 }
 
 /* ===== Responsive (degraded mobile / tablet) ===== */

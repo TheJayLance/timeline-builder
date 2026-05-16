@@ -1,8 +1,11 @@
 // ============================================================================
 // VENDORED from C:\jeff-data\jaylance\parallel-tracks\parallel-tracks.jsx
-// Copy date: 2026-05-15
-// Library version: 2026-05-15 (Phase C: dense-cluster leader elbow + 2-line
-//                  wrapping labels + role line capability)
+// Copy date: 2026-05-15 (Phase 4C: legend cosmetics on 4B unified-X substrate)
+// Library version: 2026-05-15
+//   Phase 4A: revert to 092469b (Phase C ship state)
+//   Phase 4B: getTrackColumnX + buildLayoutMetrics unification
+//   Phase 4C: name-above-bullet, count removed, label wrap discipline,
+//             chip min-width sized to longest word
 //
 // SURGERY APPLIED for ES-module build (Vite):
 //   1. Top-of-file `const { useState, ... } = React;` replaced with
@@ -126,6 +129,57 @@ function packLabelsTopDown(labels, minGap, startY = 0) {
   return out;
 }
 
+// ---------- Per-track column X (canonical source of truth) ----------
+// SINGLE source of truth for "where does a track live on the horizontal
+// axis". Every per-track X in the renderer — SVG track lines, station
+// dots, leader-line endpoints, track caps, AND legend chip bullets —
+// flows from this one function. Identical inputs guarantee identical
+// output, which is the only way bullet-on-chip and dot-on-line stay
+// co-axial across every viewport. If you need a per-track X anywhere
+// else, call this. Do not reinvent the formula.
+//
+// Inputs are deliberately explicit (no React state, no closure capture):
+//   trackId         — id of the track whose X you want
+//   visibleTrackIds — ordered list of currently-visible track ids; the
+//                     track's position in this list is what determines
+//                     its column slot
+//   layoutMetrics   — snapshot produced by buildLayoutMetrics() with
+//                     { width, lanePadding, labelOffset, effectiveLabelWidth }
+//
+// Returns the X (in the routes-panel coordinate system) for the
+// requested track, or null if the track is not in visibleTrackIds
+// (i.e. currently hidden by the legend toggle).
+function getTrackColumnX(trackId, visibleTrackIds, layoutMetrics) {
+  const idx = visibleTrackIds.indexOf(trackId);
+  if (idx < 0) return null;
+  const count = visibleTrackIds.length;
+  const { width, lanePadding, labelOffset, effectiveLabelWidth } = layoutMetrics;
+  const labelReserve = effectiveLabelWidth + labelOffset + 16;
+  const usable = Math.max(0, width - lanePadding - labelReserve);
+  if (count === 1) return lanePadding + usable / 2;
+  if (count <= 0) return 0;
+  return lanePadding + (idx * usable) / (count - 1);
+}
+
+// Snapshot of everything getTrackColumnX needs from the current viewport
+// + visible-track count. One place that derives effectiveLabelWidth so
+// every consumer sees the same value.
+function buildLayoutMetrics({ width, visibleCount, cfg }) {
+  const effectiveLabelWidth = Math.max(
+    cfg.minLabelWidth,
+    Math.min(
+      cfg.labelWidth,
+      (width - cfg.lanePadding) / Math.max(1, visibleCount) - cfg.labelOffset - 8
+    )
+  );
+  return {
+    width,
+    lanePadding: cfg.lanePadding,
+    labelOffset: cfg.labelOffset,
+    effectiveLabelWidth,
+  };
+}
+
 // ---------- Per-track segment computation ----------
 function computeTrackSegments(track, axis, segmentGapDays) {
   const ongoingTail = 24;
@@ -229,25 +283,17 @@ function ParallelTracks({
     return () => ro.disconnect();
   }, []);
 
-  const effectiveLabelWidth = Math.max(
-    cfg.minLabelWidth,
-    Math.min(
-      cfg.labelWidth,
-      (width - cfg.lanePadding) / Math.max(1, N) - cfg.labelOffset - 8
-    )
+  const visibleTrackIds = useMemo(() => tracks.map(t => t.id), [tracks]);
+  const layoutMetrics = useMemo(
+    () => buildLayoutMetrics({ width, visibleCount: N, cfg }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [width, N, cfg.minLabelWidth, cfg.labelWidth, cfg.lanePadding, cfg.labelOffset]
   );
-
-  function columnX(idx, count = N) {
-    const labelReserve = effectiveLabelWidth + cfg.labelOffset + 16;
-    const usable = Math.max(0, width - cfg.lanePadding - labelReserve);
-    if (count === 1) return cfg.lanePadding + usable / 2;
-    if (count <= 0) return 0;
-    return cfg.lanePadding + (idx * usable) / (count - 1);
-  }
+  const effectiveLabelWidth = layoutMetrics.effectiveLabelWidth;
 
   const { trackData, canvasH } = useMemo(() => {
     const tracksOut = tracks.map((track, idx) => {
-      const x = columnX(idx);
+      const x = getTrackColumnX(track.id, visibleTrackIds, layoutMetrics);
       const segments = computeTrackSegments(track, axis, cfg.segmentGapDays);
       const labelInputs = segments.map(s => ({
         preferredY: s.headY,
@@ -265,7 +311,7 @@ function ParallelTracks({
     const canvasH = Math.max(axis.canvasHeight, maxLabelBottom + 24);
     return { trackData: tracksOut, canvasH };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tracks, axis, width, cfg.segmentGapDays, cfg.labelHeight, cfg.minLabelGap, cfg.lanePadding, effectiveLabelWidth]);
+  }, [tracks, visibleTrackIds, layoutMetrics, axis, cfg.segmentGapDays, cfg.labelHeight, cfg.minLabelGap]);
 
   return (
     <div className={"pt-root " + (className || "")}>
@@ -273,7 +319,8 @@ function ParallelTracks({
         tracks={rawTracks}
         hidden={hidden}
         onToggle={toggleHidden}
-        columnX={columnX}
+        visibleTrackIds={visibleTrackIds}
+        layoutMetrics={layoutMetrics}
         width={width}
         cfg={cfg}
         framePad={32}
@@ -331,51 +378,90 @@ function ParallelTracks({
 
 // ---------- Sub-components ----------
 
-function PTLegend({ tracks, hidden, onToggle, columnX, width, cfg, framePad = 32, yearsRailW = 88 }) {
-  // Every chip's BULLET is locked to its track's column X (the same
-  // columnX() the track line uses), sharing one coordinate system. The
-  // label/count detach from the bullet's horizontal position and center
-  // beneath it. Bullet alignment is the hard constraint; label yields.
-  // Page-X of a track line = framePad + yearsRailW + columnX(visibleIdx).
-  const visible = tracks.filter(t => !hidden.has(t.id));
-  const visibleIndexById = new Map(visible.map((t, i) => [t.id, i]));
-  const ready = width > 0 && typeof columnX === "function";
+function PTLegend({ tracks, hidden, onToggle, visibleTrackIds, layoutMetrics, width, cfg, framePad = 32, yearsRailW = 88 }) {
+  // Every chip's BULLET is locked to its track's column X. The X comes
+  // from getTrackColumnX() — the SAME function the chart-body uses for
+  // its track lines, dots, leaders, and caps — so legend bullets and
+  // chart elements share one coordinate system by construction. The
+  // label sits ABOVE the bullet in a vertical stack; bullet stays on X,
+  // the label centers beneath it (text-wrap: balance handles wrapping).
+  // Page-X of a track line = framePad + yearsRailW + getTrackColumnX(...).
+  const ready = width > 0 && Array.isArray(visibleTrackIds) && layoutMetrics != null;
 
   let slotW = 160;
-  if (ready && visible.length > 1) {
-    slotW = Math.abs(columnX(1, visible.length) - columnX(0, visible.length));
-  } else if (ready && visible.length === 1) {
+  if (ready && visibleTrackIds.length > 1) {
+    const x0 = getTrackColumnX(visibleTrackIds[0], visibleTrackIds, layoutMetrics);
+    const x1 = getTrackColumnX(visibleTrackIds[1], visibleTrackIds, layoutMetrics);
+    slotW = Math.abs(x1 - x0);
+  } else if (ready && visibleTrackIds.length === 1) {
     slotW = Math.max(160, width - cfg.lanePadding);
   }
+
+  // Longest single-word width across every chip's label, measured at
+  // the legend label's typography (.pt-legend-track-locked .pt-legend-name:
+  // 600 12.5px Inter Tight). This is the hard floor a chip must reserve
+  // before column-locking — below it, words would be forced to wrap mid-
+  // word, which the spec forbids. Memoized on the labels themselves; the
+  // canvas measurement is browser-only and synchronous.
+  const labelKey = useMemo(
+    () => tracks.map(t => t.label || "").join(""),
+    [tracks]
+  );
+  const longestWordW = useMemo(() => {
+    if (typeof document === "undefined") return 0;
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    ctx.font = "600 12.5px \"Inter Tight\", system-ui, sans-serif";
+    let max = 0;
+    for (const t of tracks) {
+      const words = String(t.label || "").split(/\s+/).filter(Boolean);
+      for (const w of words) {
+        const m = ctx.measureText(w).width;
+        if (m > max) max = m;
+      }
+    }
+    return max;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [labelKey]);
+
+  // Reserve breathing room around the longest word; chip cannot squeeze
+  // narrower than this. If slotW is below this floor, column-lock is
+  // abandoned and the legend reflows to multiple rows (flex-wrap on the
+  // inner) — the spec's "multiple complete rows > one row of broken
+  // chips" rule.
+  const minChipW = Math.ceil(longestWordW + 16);
+  const canColumnLock = ready && slotW >= minChipW;
 
   const hiddenList = tracks.filter(t => hidden.has(t.id));
   const hiddenIndexById = new Map(hiddenList.map((t, i) => [t.id, i]));
 
   return (
     <div className="pt-legend">
-      <div className="pt-legend-inner" style={ready ? { position: "relative", display: "block", minHeight: 56 } : undefined}>
+      <div
+        className="pt-legend-inner"
+        style={ready && canColumnLock ? { position: "relative", display: "block", minHeight: 56 } : undefined}
+      >
         <span className="pt-legend-title">Tracks</span>
         {tracks.map(t => {
           const isHidden = hidden.has(t.id);
-          const vIdx = visibleIndexById.get(t.id);
-          const colX = (ready && vIdx != null)
-            ? framePad + yearsRailW + columnX(vIdx, visible.length)
-            : null;
+          const colXRoutes = ready ? getTrackColumnX(t.id, visibleTrackIds, layoutMetrics) : null;
+          const colX = (colXRoutes != null) ? framePad + yearsRailW + colXRoutes : null;
           let style;
-          if (ready && colX != null) {
+          if (ready && canColumnLock && !isHidden && colX != null) {
             style = {
               position: "absolute",
               left: colX,
               top: 8,
               transform: "translateX(-50%)",
               width: Math.max(72, slotW - 8),
+              minWidth: minChipW,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               gap: 4,
               textAlign: "center",
             };
-          } else if (ready && isHidden) {
+          } else if (ready && canColumnLock && isHidden) {
             const hIdx = hiddenIndexById.get(t.id) ?? 0;
             style = {
               position: "absolute",
@@ -387,7 +473,7 @@ function PTLegend({ tracks, hidden, onToggle, columnX, width, cfg, framePad = 32
               gap: 8,
             };
           } else {
-            style = undefined;
+            style = { minWidth: minChipW };
           }
           return (
             <button
@@ -398,14 +484,13 @@ function PTLegend({ tracks, hidden, onToggle, columnX, width, cfg, framePad = 32
               aria-pressed={!isHidden}
               style={style}
             >
+              <span className="pt-legend-caption">
+                <span className="pt-legend-name">{t.label}</span>
+              </span>
               <span
                 className="pt-legend-bullet"
                 style={{ background: isHidden ? "transparent" : t.color, borderColor: t.color }}
               >{t.code || ""}</span>
-              <span className="pt-legend-caption">
-                <span className="pt-legend-name">{t.label}</span>
-                <span className="pt-legend-count">{t.items?.length ?? 0}</span>
-              </span>
             </button>
           );
         })}
@@ -615,5 +700,6 @@ function PTStation({ track, seg, labelY, centerX, cfg, onStationClick, renderSta
     </button>
   );
 }
+
 
 export { ParallelTracks, ptParseDate, ptFormatPeriod };

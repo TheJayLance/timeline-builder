@@ -1,7 +1,8 @@
 // ============================================================================
 // VENDORED from C:\jeff-data\jaylance\parallel-tracks\parallel-tracks.jsx
-// Copy date: 2026-05-14
-// Library version: 2026-05-14 (post-Phase-A hinges-to-right-rail change)
+// Copy date: 2026-05-15
+// Library version: 2026-05-15 (Phase C: dense-cluster leader elbow + 2-line
+//                  wrapping labels + role line capability)
 //
 // SURGERY APPLIED for ES-module build (Vite):
 //   1. Top-of-file `const { useState, ... } = React;` replaced with
@@ -184,15 +185,17 @@ function ParallelTracks({
     lineWidth:       config.lineWidth       ?? 14,
     dotSize:         config.dotSize         ?? 18,
     lanePadding:     config.lanePadding     ?? 80,
-    labelWidth:      config.labelWidth      ?? 160,
-    labelOffset:     config.labelOffset     ?? 24,
-    labelHeight:     config.labelHeight     ?? 34,
-    minLabelGap:     config.minLabelGap     ?? 4,
+    labelWidth:      config.labelWidth      ?? 200,
+    labelOffset:     config.labelOffset     ?? 28,
+    labelHeight:     config.labelHeight     ?? 56,
+    labelInset:      config.labelInset      ?? 6,
+    minLabelGap:     config.minLabelGap     ?? 8,
     segmentGapDays:  config.segmentGapDays  ?? 60,
     maxTracks:       config.maxTracks       ?? 6,
     cornerRadius:    config.cornerRadius    ?? 22,
     showRoleInLabel: config.showRoleInLabel ?? false,
-    minLabelWidth:   config.minLabelWidth   ?? 92,
+    titleLines:      config.titleLines      ?? 2,
+    minLabelWidth:   config.minLabelWidth   ?? 132,
   };
 
   if (rawTracks.length > cfg.maxTracks) {
@@ -270,6 +273,11 @@ function ParallelTracks({
         tracks={rawTracks}
         hidden={hidden}
         onToggle={toggleHidden}
+        columnX={columnX}
+        width={width}
+        cfg={cfg}
+        framePad={32}
+        yearsRailW={88}
       />
       <div className="pt-frame">
         <div
@@ -323,27 +331,81 @@ function ParallelTracks({
 
 // ---------- Sub-components ----------
 
-function PTLegend({ tracks, hidden, onToggle }) {
+function PTLegend({ tracks, hidden, onToggle, columnX, width, cfg, framePad = 32, yearsRailW = 88 }) {
+  // Every chip's BULLET is locked to its track's column X (the same
+  // columnX() the track line uses), sharing one coordinate system. The
+  // label/count detach from the bullet's horizontal position and center
+  // beneath it. Bullet alignment is the hard constraint; label yields.
+  // Page-X of a track line = framePad + yearsRailW + columnX(visibleIdx).
+  const visible = tracks.filter(t => !hidden.has(t.id));
+  const visibleIndexById = new Map(visible.map((t, i) => [t.id, i]));
+  const ready = width > 0 && typeof columnX === "function";
+
+  let slotW = 160;
+  if (ready && visible.length > 1) {
+    slotW = Math.abs(columnX(1, visible.length) - columnX(0, visible.length));
+  } else if (ready && visible.length === 1) {
+    slotW = Math.max(160, width - cfg.lanePadding);
+  }
+
+  const hiddenList = tracks.filter(t => hidden.has(t.id));
+  const hiddenIndexById = new Map(hiddenList.map((t, i) => [t.id, i]));
+
   return (
     <div className="pt-legend">
-      <div className="pt-legend-inner">
+      <div className="pt-legend-inner" style={ready ? { position: "relative", display: "block", minHeight: 56 } : undefined}>
         <span className="pt-legend-title">Tracks</span>
         {tracks.map(t => {
           const isHidden = hidden.has(t.id);
+          const vIdx = visibleIndexById.get(t.id);
+          const colX = (ready && vIdx != null)
+            ? framePad + yearsRailW + columnX(vIdx, visible.length)
+            : null;
+          let style;
+          if (ready && colX != null) {
+            style = {
+              position: "absolute",
+              left: colX,
+              top: 8,
+              transform: "translateX(-50%)",
+              width: Math.max(72, slotW - 8),
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 4,
+              textAlign: "center",
+            };
+          } else if (ready && isHidden) {
+            const hIdx = hiddenIndexById.get(t.id) ?? 0;
+            style = {
+              position: "absolute",
+              right: 16 + hIdx * 132,
+              top: 8,
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+            };
+          } else {
+            style = undefined;
+          }
           return (
             <button
               key={t.id}
-              className={"pt-legend-track" + (isHidden ? " is-hidden" : "")}
+              className={"pt-legend-track pt-legend-track-locked" + (isHidden ? " is-hidden" : "")}
               type="button"
               onClick={() => onToggle(t.id)}
               aria-pressed={!isHidden}
+              style={style}
             >
               <span
                 className="pt-legend-bullet"
                 style={{ background: isHidden ? "transparent" : t.color, borderColor: t.color }}
               >{t.code || ""}</span>
-              <span className="pt-legend-name">{t.label}</span>
-              <span className="pt-legend-count">{t.items?.length ?? 0}</span>
+              <span className="pt-legend-caption">
+                <span className="pt-legend-name">{t.label}</span>
+                <span className="pt-legend-count">{t.items?.length ?? 0}</span>
+              </span>
             </button>
           );
         })}
@@ -490,6 +552,9 @@ function PTStation({ track, seg, labelY, centerX, cfg, onStationClick, renderSta
   const parsed = ptParseDate(item.period_start);
   const period = ptFormatPeriod(parsed, item.period_display);
   const side = "right";
+  // DOT Y IS SACRED: dot stays at the item's true date on the line, always.
+  // The packer may move the LABEL in dense clusters; the leader becomes a
+  // visible elbow (h-stub -> v-run -> short h-in) that tethers label to dot.
   const dotY = seg.headY;
 
   const labelLeft = track.x + cfg.labelOffset;
@@ -505,6 +570,11 @@ function PTStation({ track, seg, labelY, centerX, cfg, onStationClick, renderSta
     top: Math.min(labelY, dotY),
     height: Math.abs(labelY - dotY),
   } : null;
+  const leaderIn = leaderVNeeded ? {
+    left: track.x + cfg.labelOffset,
+    top: labelY,
+    width: Math.max(0, cfg.labelInset != null ? cfg.labelInset : 6),
+  } : null;
 
   return (
     <button
@@ -516,6 +586,9 @@ function PTStation({ track, seg, labelY, centerX, cfg, onStationClick, renderSta
       <span className="pt-leader pt-leader-h" style={leaderH}></span>
       {leaderV && (
         <span className="pt-leader pt-leader-v" style={leaderV}></span>
+      )}
+      {leaderIn && (
+        <span className="pt-leader pt-leader-h pt-leader-in" style={leaderIn}></span>
       )}
       <span
         className="pt-dot"
@@ -530,6 +603,7 @@ function PTStation({ track, seg, labelY, centerX, cfg, onStationClick, renderSta
             left: labelLeft,
             top: labelY,
             width: track.labelWidth || cfg.labelWidth,
+            "--pt-title-lines": cfg.titleLines,
             [side === "right" ? "borderLeftColor" : "borderRightColor"]: track.color,
           }}
         >

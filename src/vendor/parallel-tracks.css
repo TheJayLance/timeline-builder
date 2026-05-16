@@ -332,9 +332,6 @@
   text-align: center;
   overflow-wrap: anywhere;
 }
-.pt-legend-track-locked .pt-legend-count {
-  margin-left: 0;
-}
 .pt-legend-title {
   font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
   font-size: 10px;
@@ -383,12 +380,6 @@
 .pt-legend-name {
   font-size: 13px;
   font-weight: 500;
-}
-.pt-legend-count {
-  font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
-  font-size: 10px;
-  color: var(--ink-3, #80726a);
-  margin-left: 4px;
 }
 
 /* ===== Responsive (degraded mobile / tablet) ===== */

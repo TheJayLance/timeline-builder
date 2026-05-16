@@ -370,7 +370,9 @@ function PTLegend({ tracks, hidden, onToggle, columnX, width, cfg, framePad = 32
               transform: "translateX(-50%)",
               width: Math.max(72, slotW - 8),
               display: "flex",
-              flexDirection: "column",
+              // column-reverse so name renders above bullet without disturbing
+              // the bullet's horizontal centering (Phase C column-lock).
+              flexDirection: "column-reverse",
               alignItems: "center",
               gap: 4,
               textAlign: "center",
@@ -404,7 +406,6 @@ function PTLegend({ tracks, hidden, onToggle, columnX, width, cfg, framePad = 32
               >{t.code || ""}</span>
               <span className="pt-legend-caption">
                 <span className="pt-legend-name">{t.label}</span>
-                <span className="pt-legend-count">{t.items?.length ?? 0}</span>
               </span>
             </button>
           );

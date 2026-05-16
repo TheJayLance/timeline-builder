@@ -1,12 +1,12 @@
-/* ===========================================================================
- * VENDORED from C:\jeff-data\jaylance\parallel-tracks\parallel-tracks.css
- * Copy date: 2026-05-15 (Phase C: dense-cluster leader + 2-line labels +
- *            column-locked legend)
- * Library version: 2026-05-15
+/* parallel-tracks.css — styles for the <ParallelTracks> primitive.
  *
- * NO SURGERY required. Plain CSS, identical to upstream.
- * When re-vendoring after upstream changes: replace contents verbatim.
- * =========================================================================== */
+ * This file owns the visual rules for the primitive. Chart pages add their
+ * own CSS for page chrome (header, reader overlay, etc.) — but never override
+ * the .pt-* rules in here without first considering the design system doc.
+ *
+ * All values reference design tokens conceptually. Where you see a magic
+ * number, it should ideally point to a token in tokens.json.
+ */
 
 /* ===== Root + layout ===== */
 .pt-root {
@@ -114,6 +114,7 @@
   text-wrap: balance;
 }
 
+/* Zone tints — background bands behind everything */
 .pt-zone-tint {
   position: absolute;
   left: 0; right: 0;
@@ -152,7 +153,7 @@
   overflow: visible;
 }
 
-/* ===== Track caps ===== */
+/* ===== Track caps (terminus labels at newest end) ===== */
 .pt-track-cap {
   position: absolute;
   transform: translateX(-50%);
@@ -171,7 +172,17 @@
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
 }
 
-/* ===== Stations ===== */
+/* ===== Stations (clickable items on a track) =====
+ *
+ * The button itself wraps the dot + label + leaders, but uses inset:0 to
+ * span the canvas (so leaders can be positioned absolutely within it).
+ * Without `pointer-events: none` here, every station button would cover the
+ * full canvas and the last-rendered station would eat all clicks.
+ *
+ * Setting pointer-events:none on the wrapper and pointer-events:auto on the
+ * dot + label restores hit-testing to the actual visible elements. The
+ * button's onClick still fires because the click event bubbles up.
+ */
 .pt-station {
   position: absolute;
   z-index: 5;
@@ -183,7 +194,7 @@
   font: inherit;
   color: inherit;
   text-align: left;
-  pointer-events: none;
+  pointer-events: none;        /* don't let the full-canvas wrapper catch clicks */
 }
 
 .pt-dot {
@@ -197,7 +208,7 @@
   z-index: 2;
   transition: transform 120ms ease, box-shadow 120ms ease;
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
-  pointer-events: auto;
+  pointer-events: auto;        /* dot IS the click target */
   cursor: pointer;
 }
 
@@ -206,7 +217,7 @@
   background: currentColor;
   opacity: 0.55;
   z-index: 1;
-  pointer-events: none;
+  pointer-events: none;        /* leader hairlines are decorative */
 }
 .pt-leader-h {
   height: 1.5px;
@@ -215,7 +226,7 @@
 .pt-leader-v {
   width: 1.5px;
   transform: translateX(-50%);
-  opacity: 0.7;
+  opacity: 0.7;                /* the tether in dense clusters — must read */
 }
 .pt-leader-in {
   opacity: 0.7;
@@ -235,7 +246,7 @@
   border: 1px solid var(--divider, #d8c8b4);
   padding: 3px 8px 4px;
   transition: border-color 120ms ease, transform 120ms ease;
-  pointer-events: auto;
+  pointer-events: auto;        /* label IS a click target too */
   cursor: pointer;
 }
 .pt-label-right {
@@ -290,7 +301,7 @@
   z-index: 6;
 }
 
-/* ===== Legend ===== */
+/* ===== Legend (top, with toggles) ===== */
 .pt-legend {
   position: sticky;
   top: 0;
@@ -308,8 +319,9 @@
   align-items: center;
   flex-wrap: wrap;
 }
-/* Column-locked: chips absolutely positioned over their track columns;
- * inner box is the positioning context; Tracks title pinned top-left. */
+/* When the legend is column-locked, chips are absolutely positioned over
+ * their track columns; the inner box becomes the positioning context and
+ * the Tracks title is pinned top-left out of the chips' way. */
 .pt-legend-inner .pt-legend-title {
   position: absolute;
   left: 32px;
@@ -317,6 +329,8 @@
   z-index: 1;
 }
 .pt-legend-track-locked {
+  /* positioned inline by the renderer; this just resets button chrome so the
+   * stacked bullet+caption reads cleanly. */
   padding: 2px 4px;
 }
 .pt-legend-caption {
@@ -330,7 +344,23 @@
   font-size: 12.5px;
   font-weight: 600;
   text-align: center;
-  overflow-wrap: anywhere;
+  /* Labels must NEVER break mid-word. Only break at whitespace; never insert
+   * hyphens; never invoke the `anywhere` fallback. If a single word can't fit
+   * the chip's content area, PTLegend reflows the whole legend instead. */
+  overflow-wrap: normal;
+  word-break: keep-all;
+  hyphens: none;
+  /* When wrapping IS needed (multi-word labels in a column-locked narrow
+   * slot), balance the line widths so the wrapped label's visual centerline
+   * aligns with the bullet beneath it. */
+  text-wrap: balance;
+}
+
+/* Reflow mode (flex-wrap legend): the title becomes an inline flex item so
+ * it doesn't overlap chips, and chips flow with content-sized width. */
+.pt-legend-inner-flow .pt-legend-title {
+  position: static;
+  align-self: center;
 }
 .pt-legend-title {
   font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
@@ -382,7 +412,10 @@
   font-weight: 500;
 }
 
-/* ===== Responsive (degraded mobile / tablet) ===== */
+/* ===== Responsive (degraded mobile / tablet) =====
+ * Below 900px, the eras gutter collapses; era labels move inline above the
+ * canvas. Below 640px, the years rail narrows and labels truncate. Full
+ * mobile (vertical-collapse) is a v2 concern — see DO-NOT.md. */
 @media (max-width: 900px) {
   .pt-canvas { --pt-eras-w: 0px; }
   .pt-eras-rail { display: none; }
